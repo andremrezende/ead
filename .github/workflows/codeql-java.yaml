@@ -53,8 +53,6 @@ jobs:
         uses: github/codeql-action/init@v2
         with:
           languages: ${{ env.languages }}
-          config-file: pcln/codeql-config/codeql-config.yml@master
-          external-repository-token: ${{ secrets.ACTIONS_REPO_PAT }}
           db-location: "${{ runner.temp }}/codeql_databases"
 
       # Autobuild attempts to build any compiled languages (C/C++, C#, or Java).
