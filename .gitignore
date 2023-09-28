@@ -38,3 +38,6 @@ utilities/node_modules/.yarn-integrity
 **/config.*.yml
 **/config-*.yml
 **/*.log
+**/mvnw
+**/mvnw.cmd
+**/.mvn
