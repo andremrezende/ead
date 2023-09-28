@@ -1,0 +1,41 @@
+name: Build
+env:
+  application: ${{ github.event.repository.name }}
+  java-version: 17 #The Java version to use for building. Please see here for valid values https://github.com/actions/setup-java
+  java-distribution: zulu
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: self-hosted
+    #This is here as the `mvnw release:perform` will checkout and commit the updated version back to github, which would trigger running this action unnecessarily.
+    if: "!startsWith(github.event.head_commit.message, '[maven-release-plugin]')"
+
+    steps:
+      - name: Checkout application repo
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.java-version }} # The JDK version to make available on the path.
+          java-package: jdk # (jre, jdk, or jdk+fx) - defaults to jdk
+          architecture: x64 # (x64 or x86) - defaults to x64
+          settings-path: /tmp/settings.xml # work around to a bug in setup-java
+          distribution: ${{ env.java-distribution }}
+
+      - name: Maven check formatting
+        run: ./mvnw com.spotify.fmt:fmt-maven-plugin:check
+
+      - name: Maven Test
+        run: ./mvnw test --batch-mode --no-transfer-progress -Dmaven.test.failure.ignore=true
+
+      - name: Publish Test Report
+        uses: ScaCap/action-surefire-report@v1
+        with:
+          check_name: test_report
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_test_failures: true

@@ -1,0 +1,77 @@
+name: "Code Scanning - Action"
+
+# 1. Update env.languages
+# 2. If autobuild does not suffice, configure the appropriate build steps to take towards the bottom
+
+env:
+  # https://codeql.github.com/docs/codeql-overview/supported-languages-and-frameworks/
+  # comma separated list of languages to scan for
+  languages: java
+  java-version: 17 #The Java version to use for building. Please see here for valid values https://github.com/actions/setup-java
+  java-distribution: zulu
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  CodeQL-Build:
+    if: "!startsWith(github.event.head_commit.message, '[maven-release-plugin]')"
+    runs-on: self-hosted
+
+    permissions:
+      # required for all workflows
+      security-events: write
+
+      # only required for workflows in private repositories
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Clear previous database
+        run: |
+          # This is to address an issue with cleanup processes on self-hosted runners
+          if [ -d "${{ runner.temp }}/codeql_databases" ]; then
+            echo "deleting ${{ runner.temp }}/codeql_databases"
+            rm -rf "${{ runner.temp }}/codeql_databases"
+          fi
+
+      - name: Setup Java
+        uses: actions/setup-java@v2
+        with:
+          java-version: ${{ env.java-version }} # The JDK version to make available on the path.
+          java-package: jdk # (jre, jdk, or jdk+fx) - defaults to jdk
+          architecture: x64 # (x64 or x86) - defaults to x64
+          settings-path: /tmp/settings.xml # work around to a bug in setup-java
+          distribution: ${{ env.java-distribution }}
+
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ env.languages }}
+          config-file: pcln/codeql-config/codeql-config.yml@master
+          external-repository-token: ${{ secrets.ACTIONS_REPO_PAT }}
+          db-location: "${{ runner.temp }}/codeql_databases"
+
+      # Autobuild attempts to build any compiled languages (C/C++, C#, or Java).
+      # If this step fails, then you should remove it and run the build manually (see below).
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      # ℹ️ Command-line programs to run using the OS shell.
+      # 📚 https://git.io/JvXDl
+
+      # ✏️ If the Autobuild fails above, remove it and uncomment the following
+      #    three lines and modify them (or add more) to build your code if your
+      #    project uses a compiled language
+
+      #- run: |
+      #     make bootstrap
+      #     make release
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
